@@ -1,0 +1,12 @@
+# Nixpacks configuration for Railway deployment
+[phases.setup]
+nixPkgs = ['dotnet-sdk_8']
+
+[phases.build]
+cmds = [
+    'cd backend/src/Api',
+    'dotnet publish -c Release -o out'
+]
+
+[start]
+cmd = 'cd backend/src/Api/out && ./Api'
