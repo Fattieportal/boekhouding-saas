@@ -1,0 +1,17 @@
+﻿.container { padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.actions { display: flex; gap: 0.5rem; }
+.defaultBtn { padding: 0.5rem 1rem; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.saveBtn { padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.cancelBtn { padding: 0.5rem 1rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.form { display: flex; flex-direction: column; gap: 1.5rem; }
+.field { display: flex; flex-direction: column; gap: 0.5rem; }
+.field label { font-weight: 600; }
+.field input { padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px; }
+.editors { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.editor { display: flex; flex-direction: column; gap: 0.5rem; }
+.editor label { font-weight: 600; }
+.editor textarea { padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 0.875rem; }
+.editor small { color: #6b7280; font-size: 0.75rem; }
+.info { padding: 1rem; background: #f3f4f6; border-radius: 6px; }
+.info p { margin: 0.5rem 0; }

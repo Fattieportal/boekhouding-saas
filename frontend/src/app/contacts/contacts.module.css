@@ -1,0 +1,9 @@
+﻿.container { padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.headerActions { display: flex; gap: 1rem; align-items: center; }
+.searchInput { padding: 0.5rem 1rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.875rem; min-width: 250px; }
+.searchInput:focus { outline: none; border-color: #667eea; }
+.createButton { padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+.pagination { margin-top: 20px; display: flex; gap: 10px; align-items: center; }

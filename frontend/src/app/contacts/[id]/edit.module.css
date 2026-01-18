@@ -1,0 +1,5 @@
+﻿.container { padding: 20px; max-width: 800px; }
+.form { display: flex; flex-direction: column; gap: 15px; }
+.form label { font-weight: bold; margin-bottom: 5px; display: block; }
+.form input, .form select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+.actions { display: flex; gap: 10px; margin-top: 20px; }

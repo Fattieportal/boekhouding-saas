@@ -1,0 +1,279 @@
+.dashboard {
+  padding: 0;
+}
+
+.container {
+  padding: 0;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 2rem 0;
+}
+
+.welcomeCard {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+}
+
+.welcomeCard h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.8rem;
+}
+
+.userInfo, .tenantInfo {
+  margin: 0.25rem 0;
+  font-size: 0.95rem;
+  opacity: 0.95;
+}
+
+.errorCard {
+  background: #fee;
+  color: #c33;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #fcc;
+}
+
+.loadingCard {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2rem;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.statCardWarning {
+  border-left: 4px solid #f59e0b;
+}
+
+.statIcon {
+  font-size: 2.5rem;
+}
+
+.statContent {
+  flex: 1;
+}
+
+.statContent h3 {
+  font-size: 0.875rem;
+  color: #666;
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+}
+
+.statLabel {
+  font-size: 0.875rem;
+  color: #888;
+  margin: 0.25rem 0 0 0;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.activitySection, .customersSection {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.activitySection h2, .customersSection h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.emptyState {
+  color: #999;
+  text-align: center;
+  padding: 2rem 0;
+  font-style: italic;
+}
+
+.activityList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activityItem {
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #f9fafb;
+  transition: background 0.2s;
+}
+
+.activityItem:hover {
+  background: #f3f4f6;
+}
+
+.activityContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.activityLabel {
+  font-size: 0.9375rem;
+  color: #333;
+  margin: 0;
+  font-weight: 500;
+}
+
+.activityMeta {
+  font-size: 0.8125rem;
+  color: #888;
+  margin: 0;
+}
+
+.customersList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.customerItem {
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #f9fafb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.customerItem:hover {
+  background: #f3f4f6;
+}
+
+.customerInfo {
+  flex: 1;
+}
+
+.customerName {
+  font-size: 0.9375rem;
+  color: #333;
+  margin: 0 0 0.25rem 0;
+  font-weight: 500;
+}
+
+.customerMeta {
+  font-size: 0.8125rem;
+  color: #888;
+  margin: 0;
+}
+
+.customerRevenue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #10b981;
+}
+
+.actionsSection {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.actionsSection h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.actionsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.actionCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.actionCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.actionIcon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.actionLabel {
+  font-size: 0.9375rem;
+}
+
+@media (max-width: 968px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .actionsGrid {
+    grid-template-columns: 1fr;
+  }
+}

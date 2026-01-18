@@ -1,0 +1,35 @@
+﻿.container { padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.headerActions { display: flex; gap: 1rem; align-items: center; }
+.filterSelect { padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+.matchBtn { padding: 0.4rem 0.8rem; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem; }
+.invoiceLink { 
+  padding: 0.4rem 0.8rem; 
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+  color: white; 
+  border: none; 
+  border-radius: 4px; 
+  cursor: pointer; 
+  font-size: 0.875rem; 
+  font-weight: 600;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+.invoiceLink:hover { 
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+.modalOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modalContent { background: white; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.transactionInfo { background: #f3f4f6; padding: 1rem; border-radius: 6px; margin: 1rem 0; }
+.transactionInfo p { margin: 0.5rem 0; }
+.invoiceList { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0; max-height: 300px; overflow-y: auto; }
+.invoiceItem { padding: 1rem; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.invoiceItem:hover { background: #f3f4f6; border-color: #667eea; }
+.invoiceItem strong { display: block; margin-bottom: 0.25rem; }
+.invoiceItem span { font-size: 0.875rem; color: #6b7280; }
+.invoiceAmount { font-weight: 600; color: #667eea; }
+.cancelBtn { padding: 0.5rem 1rem; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; }

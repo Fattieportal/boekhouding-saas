@@ -1,0 +1,348 @@
+# FASE D - Complete MVP Glue Smoke Test
+# Tests all Fase D functionality: Dashboard, Filtering, Payments, Reports, Deep Links
+
+Write-Host "================================" -ForegroundColor Cyan
+Write-Host "FASE D: MVP GLUE SMOKE TEST" -ForegroundColor Cyan
+Write-Host "================================" -ForegroundColor Cyan
+Write-Host ""
+
+$ErrorActionPreference = "Stop"
+$baseUrl = "http://localhost:5001/api"
+$testsPassed = 0
+$testsFailed = 0
+
+function Test-Endpoint {
+    param(
+        [string]$Name,
+        [string]$Url,
+        [hashtable]$Headers,
+        [string]$Method = "Get",
+        [object]$Body = $null,
+        [scriptblock]$Validate
+    )
+    
+    Write-Host "TEST: $Name" -ForegroundColor Yellow
+    try {
+        if ($Method -eq "Get") {
+            $response = Invoke-RestMethod -Uri $Url -Method Get -Headers $Headers
+        } elseif ($Method -eq "Post") {
+            $response = Invoke-RestMethod -Uri $Url -Method Post -Headers $Headers -Body ($Body | ConvertTo-Json) -ContentType "application/json"
+        }
+        
+        if ($Validate) {
+            $result = & $Validate $response
+            if ($result) {
+                Write-Host "  ✓ PASS" -ForegroundColor Green
+                $script:testsPassed++
+                return $response
+            } else {
+                Write-Host "  ✗ FAIL: Validation failed" -ForegroundColor Red
+                $script:testsFailed++
+                return $null
+            }
+        } else {
+            Write-Host "  ✓ PASS" -ForegroundColor Green
+            $script:testsPassed++
+            return $response
+        }
+    } catch {
+        Write-Host "  ✗ FAIL: $($_.Exception.Message)" -ForegroundColor Red
+        $script:testsFailed++
+        return $null
+    }
+}
+
+# ============================================
+# SETUP: Login & Get Tenant
+# ============================================
+
+Write-Host ""
+Write-Host "SETUP: Authentication" -ForegroundColor Cyan
+Write-Host "--------------------" -ForegroundColor Cyan
+
+$loginBody = @{
+    email = "admin@demo.local"
+    password = "Admin123!"
+}
+
+$loginResponse = Test-Endpoint `
+    -Name "Login to get JWT token" `
+    -Url "$baseUrl/auth/login" `
+    -Method "Post" `
+    -Body $loginBody `
+    -Validate { param($r) $r.token -ne $null }
+
+if (-not $loginResponse) {
+    Write-Host ""
+    Write-Host "FATAL: Cannot login. Make sure API is running at http://localhost:5001" -ForegroundColor Red
+    exit 1
+}
+
+$token = $loginResponse.token
+$authHeaders = @{ "Authorization" = "Bearer $token" }
+
+$tenant = Test-Endpoint `
+    -Name "Get tenant info" `
+    -Url "$baseUrl/tenants/my" `
+    -Headers $authHeaders `
+    -Validate { param($r) $r.id -ne $null }
+
+if (-not $tenant) {
+    Write-Host ""
+    Write-Host "FATAL: Cannot get tenant" -ForegroundColor Red
+    exit 1
+}
+
+$headers = @{
+    "Authorization" = "Bearer $token"
+    "X-Tenant-Id" = $tenant.id
+}
+
+Write-Host ""
+Write-Host "Authenticated as: $($tenant.name)" -ForegroundColor Green
+Write-Host "Tenant ID: $($tenant.id)" -ForegroundColor Green
+
+# ============================================
+# TEST GROUP 1: Dashboard Endpoint (G1)
+# ============================================
+
+Write-Host ""
+Write-Host "TEST GROUP 1: Dashboard Aggregate Endpoint" -ForegroundColor Cyan
+Write-Host "-------------------------------------------" -ForegroundColor Cyan
+
+$dashboard = Test-Endpoint `
+    -Name "GET /api/dashboard (current month)" `
+    -Url "$baseUrl/dashboard?from=2026-01-01&to=2026-01-31" `
+    -Headers $headers `
+    -Validate {
+        param($r)
+        $r.invoices -ne $null -and
+        $r.revenue -ne $null -and
+        $r.bank -ne $null -and
+        $r.activity -ne $null
+    }
+
+if ($dashboard) {
+    Write-Host "  Dashboard Metrics:" -ForegroundColor Gray
+    Write-Host "    Unpaid Invoices: $($dashboard.invoices.unpaidCount)" -ForegroundColor Gray
+    Write-Host "    Overdue Invoices: $($dashboard.invoices.overdueCount)" -ForegroundColor Gray
+    Write-Host "    Open Amount Total: $($dashboard.invoices.openAmountTotal)" -ForegroundColor Gray
+    Write-Host "    Revenue This Period: $($dashboard.revenue.revenueInclThisPeriod)" -ForegroundColor Gray
+    Write-Host "    Unmatched Transactions: $($dashboard.bank.unmatchedTransactionsCount)" -ForegroundColor Gray
+    Write-Host "    Recent Activities: $($dashboard.activity.Count)" -ForegroundColor Gray
+}
+
+# ============================================
+# TEST GROUP 2: Invoice Filtering (G7)
+# ============================================
+
+Write-Host ""
+Write-Host "TEST GROUP 2: Invoice Filtering" -ForegroundColor Cyan
+Write-Host "--------------------------------" -ForegroundColor Cyan
+
+$allInvoices = Test-Endpoint `
+    -Name "GET /api/salesinvoices (all invoices)" `
+    -Url "$baseUrl/salesinvoices" `
+    -Headers $headers `
+    -Validate { param($r) $r.Count -ge 0 }
+
+if ($allInvoices) {
+    Write-Host "  Total invoices: $($allInvoices.Count)" -ForegroundColor Gray
+}
+
+$postedInvoices = Test-Endpoint `
+    -Name "GET /api/salesinvoices?status=2 (posted only)" `
+    -Url "$baseUrl/salesinvoices?status=2" `
+    -Headers $headers `
+    -Validate { param($r) $r.Count -ge 0 -and ($r | Where-Object { $_.status -ne 2 }).Count -eq 0 }
+
+if ($postedInvoices) {
+    Write-Host "  Posted invoices: $($postedInvoices.Count)" -ForegroundColor Gray
+}
+
+$overdueInvoices = Test-Endpoint `
+    -Name "GET /api/salesinvoices?overdue=true (overdue only)" `
+    -Url "$baseUrl/salesinvoices?overdue=true" `
+    -Headers $headers `
+    -Validate { param($r) $r.Count -ge 0 -and ($r | Where-Object { -not $_.isOverdue }).Count -eq 0 }
+
+if ($overdueInvoices) {
+    Write-Host "  Overdue invoices: $($overdueInvoices.Count)" -ForegroundColor Gray
+}
+
+# ============================================
+# TEST GROUP 3: Payment Links & OpenAmount (G2, G4)
+# ============================================
+
+Write-Host ""
+Write-Host "TEST GROUP 3: Payment Links & OpenAmount Tracking" -ForegroundColor Cyan
+Write-Host "--------------------------------------------------" -ForegroundColor Cyan
+
+if ($allInvoices -and $allInvoices.Count -gt 0) {
+    $testInvoice = $allInvoices[0]
+    
+    $invoiceDetail = Test-Endpoint `
+        -Name "GET /api/salesinvoices/{id} (with payments)" `
+        -Url "$baseUrl/salesinvoices/$($testInvoice.id)" `
+        -Headers $headers `
+        -Validate {
+            param($r)
+            $r.id -ne $null -and
+            $r.openAmount -ne $null -and
+            $r.payments -ne $null
+        }
+    
+    if ($invoiceDetail) {
+        Write-Host "  Invoice: $($invoiceDetail.invoiceNumber)" -ForegroundColor Gray
+        Write-Host "    Total: $($invoiceDetail.total)" -ForegroundColor Gray
+        Write-Host "    Open Amount: $($invoiceDetail.openAmount)" -ForegroundColor Gray
+        Write-Host "    Is Unpaid: $($invoiceDetail.isUnpaid)" -ForegroundColor Gray
+        Write-Host "    Is Overdue: $($invoiceDetail.isOverdue)" -ForegroundColor Gray
+        Write-Host "    Payments: $($invoiceDetail.payments.Count)" -ForegroundColor Gray
+        Write-Host "    Journal Entry ID: $($invoiceDetail.journalEntryId)" -ForegroundColor Gray
+    }
+} else {
+    Write-Host "  SKIP: No invoices found for testing" -ForegroundColor Yellow
+}
+
+# ============================================
+# TEST GROUP 4: Bank Transactions Deep Links (G4)
+# ============================================
+
+Write-Host ""
+Write-Host "TEST GROUP 4: Bank Transaction Deep Links" -ForegroundColor Cyan
+Write-Host "------------------------------------------" -ForegroundColor Cyan
+
+$transactions = Test-Endpoint `
+    -Name "GET /api/bank/transactions (with deep links)" `
+    -Url "$baseUrl/bank/transactions" `
+    -Headers $headers `
+    -Validate { param($r) $r.Count -ge 0 }
+
+if ($transactions) {
+    Write-Host "  Total transactions: $($transactions.Count)" -ForegroundColor Gray
+    
+    $matchedTx = $transactions | Where-Object { $_.matchedStatus -eq 1 } | Select-Object -First 1
+    if ($matchedTx) {
+        Write-Host "  Example Matched Transaction:" -ForegroundColor Gray
+        Write-Host "    Amount: $($matchedTx.amount)" -ForegroundColor Gray
+        Write-Host "    Invoice Number: $($matchedTx.invoiceNumber)" -ForegroundColor Gray
+        Write-Host "    Matched Invoice ID: $($matchedTx.matchedInvoiceId)" -ForegroundColor Gray
+        Write-Host "    Journal Entry ID: $($matchedTx.journalEntryId)" -ForegroundColor Gray
+        
+        # Verify deep link works
+        if ($matchedTx.matchedInvoiceId) {
+            Test-Endpoint `
+                -Name "Verify invoice deep link works" `
+                -Url "$baseUrl/salesinvoices/$($matchedTx.matchedInvoiceId)" `
+                -Headers $headers `
+                -Validate { param($r) $r.id -eq $matchedTx.matchedInvoiceId } | Out-Null
+        }
+    }
+}
+
+# ============================================
+# TEST GROUP 5: Financial Reports (G9)
+# ============================================
+
+Write-Host ""
+Write-Host "TEST GROUP 5: Financial Reports" -ForegroundColor Cyan
+Write-Host "--------------------------------" -ForegroundColor Cyan
+
+$profitLoss = Test-Endpoint `
+    -Name "GET /api/reports/profit-loss (current month)" `
+    -Url "$baseUrl/reports/profit-loss?from=2026-01-01&to=2026-01-31" `
+    -Headers $headers `
+    -Validate {
+        param($r)
+        $r.fromDate -ne $null -and
+        $r.toDate -ne $null -and
+        $r.totalRevenue -ne $null -and
+        $r.totalExpenses -ne $null -and
+        $r.netIncome -ne $null
+    }
+
+if ($profitLoss) {
+    Write-Host "  P&L Report ($($profitLoss.fromDate) to $($profitLoss.toDate)):" -ForegroundColor Gray
+    Write-Host "    Total Revenue: $($profitLoss.totalRevenue)" -ForegroundColor Gray
+    Write-Host "    Total Expenses: $($profitLoss.totalExpenses)" -ForegroundColor Gray
+    Write-Host "    Net Income: $($profitLoss.netIncome)" -ForegroundColor Gray
+    Write-Host "    Revenue Accounts: $($profitLoss.revenueAccounts.Count)" -ForegroundColor Gray
+    Write-Host "    Expense Accounts: $($profitLoss.expenseAccounts.Count)" -ForegroundColor Gray
+}
+
+$balanceSheet = Test-Endpoint `
+    -Name "GET /api/reports/balance-sheet (as of today)" `
+    -Url "$baseUrl/reports/balance-sheet" `
+    -Headers $headers `
+    -Validate {
+        param($r)
+        $r.asOfDate -ne $null -and
+        $r.totalAssets -ne $null -and
+        $r.totalLiabilities -ne $null -and
+        $r.totalEquity -ne $null -and
+        $r.balance -ne $null
+    }
+
+if ($balanceSheet) {
+    Write-Host "  Balance Sheet (as of $($balanceSheet.asOfDate)):" -ForegroundColor Gray
+    Write-Host "    Total Assets: $($balanceSheet.totalAssets)" -ForegroundColor Gray
+    Write-Host "    Total Liabilities: $($balanceSheet.totalLiabilities)" -ForegroundColor Gray
+    Write-Host "    Total Equity: $($balanceSheet.totalEquity)" -ForegroundColor Gray
+    Write-Host "    Balance Check: $($balanceSheet.balance) (should be 0)" -ForegroundColor Gray
+    
+    if ([Math]::Abs($balanceSheet.balance) -gt 0.01) {
+        Write-Host "    WARNING: Balance sheet not balanced!" -ForegroundColor Red
+        $script:testsFailed++
+    }
+}
+
+# ============================================
+# TEST GROUP 6: Business Invariants (G5)
+# ============================================
+
+Write-Host ""
+Write-Host "TEST GROUP 6: Business Invariants Enforcement" -ForegroundColor Cyan
+Write-Host "----------------------------------------------" -ForegroundColor Cyan
+
+# Test: Cannot match already matched transaction
+$matchedTx = $transactions | Where-Object { $_.matchedStatus -eq 1 } | Select-Object -First 1
+if ($matchedTx) {
+    Write-Host "TEST: Cannot double-match transaction" -ForegroundColor Yellow
+    try {
+        $matchBody = @{ invoiceId = [Guid]::NewGuid().ToString() }
+        Invoke-RestMethod -Uri "$baseUrl/bank/transactions/$($matchedTx.id)/match" `
+            -Method Post -Headers $headers -Body ($matchBody | ConvertTo-Json) -ContentType "application/json"
+        Write-Host "  ✗ FAIL: Should have thrown error" -ForegroundColor Red
+        $script:testsFailed++
+    } catch {
+        if ($_.Exception.Message -like "*already matched*") {
+            Write-Host "  ✓ PASS: Correctly prevented double matching" -ForegroundColor Green
+            $script:testsPassed++
+        } else {
+            Write-Host "  ✗ FAIL: Wrong error: $($_.Exception.Message)" -ForegroundColor Red
+            $script:testsFailed++
+        }
+    }
+}
+
+# ============================================
+# SUMMARY
+# ============================================
+
+Write-Host ""
+Write-Host "================================" -ForegroundColor Cyan
+Write-Host "TEST SUMMARY" -ForegroundColor Cyan
+Write-Host "================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Tests Passed: $testsPassed" -ForegroundColor Green
+Write-Host "Tests Failed: $testsFailed" -ForegroundColor $(if ($testsFailed -gt 0) { "Red" } else { "Green" })
+Write-Host ""
+
+if ($testsFailed -eq 0) {
+    Write-Host "✓ ALL TESTS PASSED - FASE D MVP GLUE IS WORKING!" -ForegroundColor Green
+    exit 0
+} else {
+    Write-Host "✗ SOME TESTS FAILED - SEE DETAILS ABOVE" -ForegroundColor Red
+    exit 1
+}
