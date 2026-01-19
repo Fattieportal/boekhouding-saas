@@ -270,6 +270,21 @@
   color: #92400e;
 }
 
+.badgeREVERSE {
+  background: #fce7f3;
+  color: #9f1239;
+}
+
+.badgeIMPORT {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.badgeMATCH {
+  background: #d1fae5;
+  color: #065f46;
+}
+
 .entityType {
   color: #374151;
   font-weight: 500;

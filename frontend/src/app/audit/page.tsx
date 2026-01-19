@@ -114,6 +114,7 @@ export default function AuditLogPage() {
                   <option value="JournalEntry">Journal Entries</option>
                   <option value="BankTransaction">Bank Transactions</option>
                   <option value="Account">Accounts</option>
+                  <option value="Tenant">Tenants</option>
                 </select>
               </div>
 
@@ -125,6 +126,9 @@ export default function AuditLogPage() {
                   <option value="UPDATE">Update</option>
                   <option value="DELETE">Delete</option>
                   <option value="POST">Post</option>
+                  <option value="REVERSE">Reverse</option>
+                  <option value="IMPORT">Import</option>
+                  <option value="MATCH">Match</option>
                 </select>
               </div>
 
