@@ -10,10 +10,20 @@ namespace Boekhouding.Infrastructure.Services;
 public class AccountService : IAccountService
 {
     private readonly ApplicationDbContext _context;
+    private readonly ITenantContext _tenantContext;
+    private readonly IAuditLogService _auditLog;
+    private readonly IUserContext _userContext;
 
-    public AccountService(ApplicationDbContext context)
+    public AccountService(
+        ApplicationDbContext context,
+        ITenantContext tenantContext,
+        IAuditLogService auditLog,
+        IUserContext userContext)
     {
         _context = context;
+        _tenantContext = tenantContext;
+        _auditLog = auditLog;
+        _userContext = userContext;
     }
 
     public async Task<(IEnumerable<AccountDto> Items, int TotalCount)> GetAccountsAsync(
@@ -106,6 +116,8 @@ public class AccountService : IAccountService
 
     public async Task<AccountDto> CreateAccountAsync(CreateAccountDto dto)
     {
+        var tenantId = _tenantContext.TenantId ?? throw new UnauthorizedAccessException("Tenant context is not set");
+        
         // Check if code already exists for this tenant
         var exists = await _context.Accounts.AnyAsync(a => a.Code == dto.Code);
         if (exists)
@@ -126,6 +138,22 @@ public class AccountService : IAccountService
         _context.Accounts.Add(account);
         await _context.SaveChangesAsync();
 
+        // Audit log for account creation
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "CREATE_ACCOUNT",
+            "Account",
+            account.Id,
+            new {
+                Code = account.Code,
+                Name = account.Name,
+                Type = account.Type.ToString(),
+                IsActive = account.IsActive,
+                Message = $"Chart of Accounts: Created account {account.Code} - {account.Name}"
+            });
+
         return new AccountDto
         {
             Id = account.Id,
@@ -140,11 +168,20 @@ public class AccountService : IAccountService
 
     public async Task<AccountDto?> UpdateAccountAsync(Guid id, UpdateAccountDto dto)
     {
+        var tenantId = _tenantContext.TenantId ?? throw new UnauthorizedAccessException("Tenant context is not set");
+        
         var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == id);
         if (account == null)
         {
             return null;
         }
+
+        // Track changes for audit
+        var changes = new Dictionary<string, object>();
+        var oldCode = account.Code;
+        var oldName = account.Name;
+        var oldType = account.Type;
+        var oldIsActive = account.IsActive;
 
         // Check if new code already exists (excluding current account)
         if (account.Code != dto.Code)
@@ -154,7 +191,17 @@ public class AccountService : IAccountService
             {
                 throw new InvalidOperationException($"Account met code '{dto.Code}' bestaat al voor deze tenant.");
             }
+            changes["Code"] = new { Old = oldCode, New = dto.Code };
         }
+
+        if (account.Name != dto.Name)
+            changes["Name"] = new { Old = oldName, New = dto.Name };
+        
+        if (account.Type != dto.Type)
+            changes["Type"] = new { Old = oldType.ToString(), New = dto.Type.ToString() };
+        
+        if (account.IsActive != dto.IsActive)
+            changes["IsActive"] = new { Old = oldIsActive, New = dto.IsActive };
 
         account.Code = dto.Code;
         account.Name = dto.Name;
@@ -163,6 +210,25 @@ public class AccountService : IAccountService
         account.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        // Audit log for account update
+        if (changes.Any())
+        {
+            var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+            await _auditLog.LogAsync(
+                tenantId,
+                userId,
+                "UPDATE_ACCOUNT",
+                "Account",
+                account.Id,
+                new {
+                    Code = account.Code,
+                    Name = account.Name,
+                    Type = account.Type.ToString(),
+                    UpdatedFields = changes,
+                    Message = $"Chart of Accounts: Updated account {account.Code} - {account.Name}"
+                });
+        }
 
         return new AccountDto
         {
@@ -178,14 +244,73 @@ public class AccountService : IAccountService
 
     public async Task<bool> DeleteAccountAsync(Guid id)
     {
+        var tenantId = _tenantContext.TenantId ?? throw new UnauthorizedAccessException("Tenant context is not set");
+        
         var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == id);
         if (account == null)
         {
             return false;
         }
 
+        // Store info before deletion for audit
+        var accountCode = account.Code;
+        var accountName = account.Name;
+        var accountType = account.Type;
+
         _context.Accounts.Remove(account);
         await _context.SaveChangesAsync();
+
+        // Audit log for account deletion
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "DELETE_ACCOUNT",
+            "Account",
+            id,
+            new {
+                Code = accountCode,
+                Name = accountName,
+                Type = accountType.ToString(),
+                Message = $"Chart of Accounts: Deleted account {accountCode} - {accountName}"
+            });
+
+        return true;
+    }
+
+    public async Task<bool> DeactivateAccountAsync(Guid id)
+    {
+        var tenantId = _tenantContext.TenantId ?? throw new UnauthorizedAccessException("Tenant context is not set");
+        
+        var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == id);
+        if (account == null)
+        {
+            return false;
+        }
+
+        if (!account.IsActive)
+        {
+            return true; // Already deactivated
+        }
+
+        account.IsActive = false;
+        account.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Audit log for account deactivation
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "DEACTIVATE_ACCOUNT",
+            "Account",
+            account.Id,
+            new {
+                Code = account.Code,
+                Name = account.Name,
+                Type = account.Type.ToString(),
+                Message = $"Chart of Accounts: Deactivated account {account.Code} - {account.Name}"
+            });
 
         return true;
     }

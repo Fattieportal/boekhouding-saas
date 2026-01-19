@@ -17,4 +17,5 @@ public interface IAccountService
     Task<AccountDto> CreateAccountAsync(CreateAccountDto dto);
     Task<AccountDto?> UpdateAccountAsync(Guid id, UpdateAccountDto dto);
     Task<bool> DeleteAccountAsync(Guid id);
+    Task<bool> DeactivateAccountAsync(Guid id);
 }
