@@ -15,9 +15,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Override connection string from environment variable (Railway support)
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 Console.WriteLine($"📊 DATABASE_URL env var: {(string.IsNullOrEmpty(databaseUrl) ? "EMPTY/NULL" : $"Length={databaseUrl.Length}")}");
-Console.WriteLine($"📊 DATABASE_URL raw value: [{databaseUrl}]"); // Show actual value with brackets
 if (!string.IsNullOrEmpty(databaseUrl))
 {
+    // Railway sometimes includes the variable name in the value (e.g., "DATABASE_URL=postgresql://...")
+    // Strip it if present
+    if (databaseUrl.StartsWith("DATABASE_URL="))
+    {
+        databaseUrl = databaseUrl.Substring("DATABASE_URL=".Length);
+        Console.WriteLine("🔧 Stripped 'DATABASE_URL=' prefix from connection string");
+    }
+    
     Console.WriteLine("🔧 Overriding connection string from DATABASE_URL environment variable");
     builder.Configuration["ConnectionStrings:DefaultConnection"] = databaseUrl;
 }
