@@ -15,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Override connection string from environment variable (Railway support)
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 Console.WriteLine($"📊 DATABASE_URL env var: {(string.IsNullOrEmpty(databaseUrl) ? "EMPTY/NULL" : $"Length={databaseUrl.Length}")}");
+Console.WriteLine($"📊 DATABASE_URL raw value: [{databaseUrl}]"); // Show actual value with brackets
 if (!string.IsNullOrEmpty(databaseUrl))
 {
     Console.WriteLine("🔧 Overriding connection string from DATABASE_URL environment variable");
