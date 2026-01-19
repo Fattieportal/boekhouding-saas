@@ -112,47 +112,63 @@ public class AuthService : IAuthService
 
     private async Task LogSuccessfulLoginAsync(User user)
     {
-        var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        var userAgent = _httpContextAccessor.HttpContext?.Request.Headers["User-Agent"].ToString() ?? "unknown";
-        
-        // For login, we don't have a tenant context yet, so we use Guid.Empty
-        // The audit log system should handle this gracefully
-        await _auditLog.LogAsync(
-            Guid.Empty, // No tenant context during login
-            user.Id, 
-            "LOGIN", 
-            "User", 
-            user.Id,
-            new 
-            { 
-                Email = user.Email, 
-                Role = user.Role.ToString(), 
-                IpAddress = ipAddress,
-                UserAgent = userAgent,
-                Message = $"User {user.Email} logged in successfully"
-            });
+        try
+        {
+            var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var userAgent = _httpContextAccessor.HttpContext?.Request.Headers["User-Agent"].ToString() ?? "unknown";
+            
+            // For login, we don't have a tenant context yet, so we use Guid.Empty
+            // The audit log system should handle this gracefully
+            await _auditLog.LogAsync(
+                Guid.Empty, // No tenant context during login
+                user.Id, 
+                "LOGIN", 
+                "User", 
+                user.Id,
+                new 
+                { 
+                    Email = user.Email, 
+                    Role = user.Role.ToString(), 
+                    IpAddress = ipAddress,
+                    UserAgent = userAgent,
+                    Message = $"User {user.Email} logged in successfully"
+                });
+        }
+        catch (Exception)
+        {
+            // Silently fail - don't break login if audit logging fails
+            // TODO: Log to application logger
+        }
     }
 
     private async Task LogFailedLoginAsync(string email, string reason)
     {
-        var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        var userAgent = _httpContextAccessor.HttpContext?.Request.Headers["User-Agent"].ToString() ?? "unknown";
-        
-        // For failed login, we also use Guid.Empty for tenant
-        await _auditLog.LogAsync(
-            Guid.Empty, 
-            Guid.Empty, // No user ID for failed login
-            "FAILED_LOGIN", 
-            "User", 
-            Guid.Empty,
-            new 
-            { 
-                Email = email, 
-                Reason = reason,
-                IpAddress = ipAddress,
-                UserAgent = userAgent,
-                Message = $"Failed login attempt for {email}: {reason}"
-            });
+        try
+        {
+            var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            var userAgent = _httpContextAccessor.HttpContext?.Request.Headers["User-Agent"].ToString() ?? "unknown";
+            
+            // For failed login, we also use Guid.Empty for tenant
+            await _auditLog.LogAsync(
+                Guid.Empty, 
+                Guid.Empty, // No user ID for failed login
+                "FAILED_LOGIN", 
+                "User", 
+                Guid.Empty,
+                new 
+                { 
+                    Email = email, 
+                    Reason = reason,
+                    IpAddress = ipAddress,
+                    UserAgent = userAgent,
+                    Message = $"Failed login attempt for {email}: {reason}"
+                });
+        }
+        catch (Exception)
+        {
+            // Silently fail - don't break login if audit logging fails
+            // TODO: Log to application logger
+        }
     }
 
     public string HashPassword(string password)
@@ -167,23 +183,30 @@ public class AuthService : IAuthService
 
     public async Task LogoutAsync(Guid userId)
     {
-        var user = await _context.Users.FindAsync(userId);
-        if (user == null) return;
+        try
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return;
 
-        var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        
-        await _auditLog.LogAsync(
-            Guid.Empty, // No tenant context during logout
-            userId, 
-            "LOGOUT", 
-            "User", 
-            userId,
-            new 
-            { 
-                Email = user.Email, 
-                IpAddress = ipAddress,
-                Message = $"User {user.Email} logged out"
-            });
+            var ipAddress = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            
+            await _auditLog.LogAsync(
+                Guid.Empty, // No tenant context during logout
+                userId, 
+                "LOGOUT", 
+                "User", 
+                userId,
+                new 
+                { 
+                    Email = user.Email, 
+                    IpAddress = ipAddress,
+                    Message = $"User {user.Email} logged out"
+                });
+        }
+        catch (Exception)
+        {
+            // Silently fail - don't break logout if audit logging fails
+        }
     }
 
     public async Task<bool> UpdateUserRoleAsync(Guid userId, Role newRole, Guid performedByUserId)
@@ -198,20 +221,27 @@ public class AuthService : IAuthService
         user.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
-        // Log permission change
-        await _auditLog.LogAsync(
-            Guid.Empty, // No tenant context for user management
-            performedByUserId, 
-            "PERMISSION_CHANGE", 
-            "User", 
-            userId,
-            new 
-            { 
-                Email = user.Email,
-                OldRole = oldRole.ToString(),
-                NewRole = newRole.ToString(),
-                Message = $"User {user.Email} role changed from {oldRole} to {newRole}"
-            });
+        try
+        {
+            // Log permission change
+            await _auditLog.LogAsync(
+                Guid.Empty, // No tenant context for user management
+                performedByUserId, 
+                "PERMISSION_CHANGE", 
+                "User", 
+                userId,
+                new 
+                { 
+                    Email = user.Email,
+                    OldRole = oldRole.ToString(),
+                    NewRole = newRole.ToString(),
+                    Message = $"User {user.Email} role changed from {oldRole} to {newRole}"
+                });
+        }
+        catch (Exception)
+        {
+            // Silently fail - don't break operation if audit logging fails
+        }
 
         return true;
     }
