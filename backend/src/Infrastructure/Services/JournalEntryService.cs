@@ -11,11 +11,19 @@ public class JournalEntryService : IJournalEntryService
 {
     private readonly ApplicationDbContext _context;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditLogService _auditLog;
+    private readonly IUserContext _userContext;
 
-    public JournalEntryService(ApplicationDbContext context, ITenantContext tenantContext)
+    public JournalEntryService(
+        ApplicationDbContext context, 
+        ITenantContext tenantContext,
+        IAuditLogService auditLog,
+        IUserContext userContext)
     {
         _context = context;
         _tenantContext = tenantContext;
+        _auditLog = auditLog;
+        _userContext = userContext;
     }
 
     public async Task<JournalEntryDto> CreateEntryAsync(CreateJournalEntryDto dto, CancellationToken cancellationToken = default)
@@ -75,6 +83,24 @@ public class JournalEntryService : IJournalEntryService
 
         _context.JournalEntries.Add(entry);
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Audit log
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "CREATE",
+            "JournalEntry",
+            entry.Id,
+            new { 
+                Reference = entry.Reference,
+                EntryDate = entry.EntryDate,
+                Status = entry.Status.ToString(),
+                LinesCount = entry.Lines.Count,
+                TotalDebit = entry.Lines.Sum(l => l.Debit),
+                TotalCredit = entry.Lines.Sum(l => l.Credit)
+            });
 
         return await GetEntryByIdAsync(entry.Id, cancellationToken) 
             ?? throw new InvalidOperationException("Entry kon niet worden opgehaald na aanmaken.");
@@ -144,6 +170,23 @@ public class JournalEntryService : IJournalEntryService
 
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Audit log
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "UPDATE",
+            "JournalEntry",
+            entry.Id,
+            new { 
+                Reference = entry.Reference,
+                EntryDate = entry.EntryDate,
+                Status = entry.Status.ToString(),
+                LinesCount = entry.Lines.Count,
+                UpdatedFields = dto
+            });
+
         return await GetEntryByIdAsync(entry.Id, cancellationToken) 
             ?? throw new InvalidOperationException("Entry kon niet worden opgehaald na update.");
     }
@@ -184,6 +227,24 @@ public class JournalEntryService : IJournalEntryService
         entry.PostedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Audit log
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "POST",
+            "JournalEntry",
+            entry.Id,
+            new { 
+                Reference = entry.Reference,
+                EntryDate = entry.EntryDate,
+                PostedAt = entry.PostedAt,
+                TotalDebit = totalDebit,
+                TotalCredit = totalCredit,
+                Message = "Journal entry posted to ledger"
+            });
 
         return await GetEntryByIdAsync(entry.Id, cancellationToken) 
             ?? throw new InvalidOperationException("Entry kon niet worden opgehaald na posten.");
@@ -247,6 +308,22 @@ public class JournalEntryService : IJournalEntryService
 
         _context.JournalEntries.Add(reversalEntry);
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Audit log voor REVERSAL
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "REVERSE",
+            "JournalEntry",
+            reversalEntry.Id,
+            new { 
+                OriginalEntryId = originalEntry.Id,
+                OriginalReference = originalEntry.Reference,
+                ReversalReference = reversalEntry.Reference,
+                Message = "Journal entry reversed"
+            });
 
         return await GetEntryByIdAsync(reversalEntry.Id, cancellationToken) 
             ?? throw new InvalidOperationException("Reversal entry kon niet worden opgehaald.");
@@ -377,6 +454,22 @@ public class JournalEntryService : IJournalEntryService
         {
             throw new InvalidOperationException($"Kan alleen Draft entries verwijderen. Huidige status: {entry.Status}");
         }
+
+        // Audit log BEFORE deletion
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "DELETE",
+            "JournalEntry",
+            entry.Id,
+            new { 
+                Reference = entry.Reference,
+                EntryDate = entry.EntryDate,
+                Status = entry.Status.ToString(),
+                LinesCount = entry.Lines.Count
+            });
 
         _context.JournalEntries.Remove(entry);
         await _context.SaveChangesAsync(cancellationToken);
