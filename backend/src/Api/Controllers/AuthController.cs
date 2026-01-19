@@ -111,4 +111,24 @@ public class AuthController : ControllerBase
             claims = User.Claims.Select(c => new { c.Type, c.Value })
         });
     }
+
+    /// <summary>
+    /// Logout the current user
+    /// </summary>
+    [HttpPost("logout")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Logout()
+    {
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        
+        if (Guid.TryParse(userIdStr, out var userId))
+        {
+            await _authService.LogoutAsync(userId);
+            _logger.LogInformation("User logged out: {UserId}", userId);
+        }
+
+        return Ok(new { message = "Logged out successfully" });
+    }
 }
