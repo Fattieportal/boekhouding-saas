@@ -132,23 +132,15 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Run database migrations automatically
+// Run database migrations and seeding automatically
 using (var scope = app.Services.CreateScope())
 {
     try
     {
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        
-        // Apply pending migrations
-        await dbContext.Database.MigrateAsync();
-        
-        Console.WriteLine("✅ Database migrations applied successfully");
-        
-        // Seed database with initial data
         var services = scope.ServiceProvider;
         await DbSeeder.SeedAsync(services);
         
-        Console.WriteLine("✅ Database seeded successfully");
+        Console.WriteLine("✅ Database initialized successfully");
     }
     catch (Exception ex)
     {

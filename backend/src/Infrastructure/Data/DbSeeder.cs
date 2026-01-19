@@ -420,6 +420,9 @@ public static class DbSeeder
 
             logger.LogInformation($"Seeded {contacts.Count} contacts for tenant {tenant.Name}");
         }
+        
+        // Also seed demo data
+        await DemoSeeder.SeedDemoDataAsync(serviceProvider);
     }
 }
 
