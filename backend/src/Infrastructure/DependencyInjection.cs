@@ -19,6 +19,14 @@ public static class DependencyInjection
             ?? Environment.GetEnvironmentVariable("DATABASE_URL") // Direct env var fallback
             ?? throw new InvalidOperationException("Connection string not found. Set either 'ConnectionStrings:DefaultConnection' or 'DATABASE_URL'.");
 
+        // Log connection string (masking password for security)
+        var maskedConnectionString = connectionString.Contains("Password=") 
+            ? System.Text.RegularExpressions.Regex.Replace(connectionString, @"Password=[^;]+", "Password=***")
+            : connectionString.Contains(":") && connectionString.Contains("@")
+                ? System.Text.RegularExpressions.Regex.Replace(connectionString, @"://[^:]+:([^@]+)@", "://*****:***@")
+                : connectionString;
+        Console.WriteLine($"🔌 Using connection string: {maskedConnectionString}");
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>
             {
