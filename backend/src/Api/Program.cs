@@ -25,8 +25,30 @@ if (!string.IsNullOrEmpty(databaseUrl))
         Console.WriteLine("🔧 Stripped 'DATABASE_URL=' prefix from connection string");
     }
     
-    Console.WriteLine("🔧 Overriding connection string from DATABASE_URL environment variable");
-    builder.Configuration["ConnectionStrings:DefaultConnection"] = databaseUrl;
+    // Convert PostgreSQL URL format to Npgsql connection string format
+    // From: postgresql://user:password@host:port/database
+    // To: Host=host;Port=port;Database=database;Username=user;Password=password
+    if (databaseUrl.StartsWith("postgresql://") || databaseUrl.StartsWith("postgres://"))
+    {
+        try
+        {
+            var uri = new Uri(databaseUrl);
+            var connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={uri.UserInfo.Split(':')[0]};Password={uri.UserInfo.Split(':')[1]}";
+            Console.WriteLine("🔧 Converted PostgreSQL URL to Npgsql connection string format");
+            builder.Configuration["ConnectionStrings:DefaultConnection"] = connectionString;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️  Failed to parse DATABASE_URL: {ex.Message}");
+            Console.WriteLine("🔧 Using raw DATABASE_URL value as fallback");
+            builder.Configuration["ConnectionStrings:DefaultConnection"] = databaseUrl;
+        }
+    }
+    else
+    {
+        Console.WriteLine("🔧 Using connection string from DATABASE_URL environment variable");
+        builder.Configuration["ConnectionStrings:DefaultConnection"] = databaseUrl;
+    }
 }
 else
 {
