@@ -15,19 +15,25 @@ public class SalesInvoiceService : ISalesInvoiceService
     private readonly ITemplateRenderer _templateRenderer;
     private readonly IPdfRenderer _pdfRenderer;
     private readonly IFileStorage _fileStorage;
+    private readonly IAuditLogService _auditLog;
+    private readonly IUserContext _userContext;
 
     public SalesInvoiceService(
         ApplicationDbContext context,
         ITenantContext tenantContext,
         ITemplateRenderer templateRenderer,
         IPdfRenderer pdfRenderer,
-        IFileStorage fileStorage)
+        IFileStorage fileStorage,
+        IAuditLogService auditLog,
+        IUserContext userContext)
     {
         _context = context;
         _tenantContext = tenantContext;
         _templateRenderer = templateRenderer;
         _pdfRenderer = pdfRenderer;
         _fileStorage = fileStorage;
+        _auditLog = auditLog;
+        _userContext = userContext;
     }
 
     public async Task<IEnumerable<SalesInvoiceDto>> GetAllInvoicesAsync(
@@ -151,6 +157,21 @@ public class SalesInvoiceService : ISalesInvoiceService
         _context.Set<SalesInvoice>().Add(invoice);
         await _context.SaveChangesAsync();
 
+        // Log audit trail
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "CREATE",
+            "SalesInvoice",
+            invoice.Id,
+            new { 
+                InvoiceNumber = invoice.InvoiceNumber,
+                Status = invoice.Status.ToString(),
+                Total = invoice.Total,
+                ContactId = invoice.ContactId
+            });
+
         // Reload with navigation properties
         await _context.Entry(invoice).Reference(i => i.Contact).LoadAsync();
 
@@ -219,6 +240,22 @@ public class SalesInvoiceService : ISalesInvoiceService
 
         await _context.SaveChangesAsync();
 
+        // Log audit trail
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "UPDATE",
+            "SalesInvoice",
+            invoice.Id,
+            new { 
+                InvoiceNumber = invoice.InvoiceNumber,
+                Status = invoice.Status.ToString(),
+                Total = invoice.Total,
+                UpdatedFields = dto
+            });
+
         return MapToDto(invoice);
     }
 
@@ -241,6 +278,21 @@ public class SalesInvoiceService : ISalesInvoiceService
         {
             await _fileStorage.DeleteFileAsync(invoice.PdfFileId.Value);
         }
+
+        // Log audit trail before deletion
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "DELETE",
+            "SalesInvoice",
+            invoice.Id,
+            new { 
+                InvoiceNumber = invoice.InvoiceNumber,
+                Status = invoice.Status.ToString(),
+                Total = invoice.Total
+            });
 
         _context.Set<SalesInvoice>().Remove(invoice);
         await _context.SaveChangesAsync();
@@ -539,6 +591,22 @@ public class SalesInvoiceService : ISalesInvoiceService
         invoice.Status = InvoiceStatus.Posted;
 
         await _context.SaveChangesAsync();
+
+        // Log audit trail for posting
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "POST",
+            "SalesInvoice",
+            invoice.Id,
+            new { 
+                InvoiceNumber = invoice.InvoiceNumber,
+                Status = invoice.Status.ToString(),
+                Total = invoice.Total,
+                JournalEntryId = journalEntry.Id,
+                Message = "Invoice posted to accounting"
+            });
 
         return MapToDto(invoice);
     }
