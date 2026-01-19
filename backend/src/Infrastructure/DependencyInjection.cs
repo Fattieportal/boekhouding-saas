@@ -13,9 +13,11 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Database configuratie
+        // Database configuratie - support both Railway DATABASE_URL and ConnectionStrings format
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string ''DefaultConnection'' not found.");
+            ?? configuration["DATABASE_URL"] // Railway fallback
+            ?? Environment.GetEnvironmentVariable("DATABASE_URL") // Direct env var fallback
+            ?? throw new InvalidOperationException("Connection string not found. Set either 'ConnectionStrings:DefaultConnection' or 'DATABASE_URL'.");
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString, npgsqlOptions =>
