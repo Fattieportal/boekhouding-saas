@@ -93,6 +93,9 @@ public static class DependencyInjection
         // Audit logging
         services.AddScoped<IAuditLogService, AuditLogService>();
         
+        // VAT & Compliance
+        services.AddScoped<IVATService, VATService>();
+        
         return services;
     }
 }
