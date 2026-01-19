@@ -19,6 +19,13 @@ public static class DependencyInjection
             ?? Environment.GetEnvironmentVariable("DATABASE_URL") // Direct env var fallback
             ?? throw new InvalidOperationException("Connection string not found. Set either 'ConnectionStrings:DefaultConnection' or 'DATABASE_URL'.");
 
+        // Railway sometimes includes the variable name in the value - strip if present
+        if (connectionString.StartsWith("DATABASE_URL="))
+        {
+            connectionString = connectionString.Substring("DATABASE_URL=".Length);
+            Console.WriteLine("🔧 [Infrastructure] Stripped 'DATABASE_URL=' prefix from connection string");
+        }
+
         // Log connection string (masking password for security)
         var maskedConnectionString = connectionString.Contains("Password=") 
             ? System.Text.RegularExpressions.Regex.Replace(connectionString, @"Password=[^;]+", "Password=***")
