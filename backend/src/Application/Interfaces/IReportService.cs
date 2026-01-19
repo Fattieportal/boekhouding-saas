@@ -16,4 +16,14 @@ public interface IReportService
     /// Haal BTW rapportage op voor een periode (gebaseerd op geboekte facturen)
     /// </summary>
     Task<VatReportDto> GetVatReportAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Export report to PDF
+    /// </summary>
+    Task<Guid> ExportReportToPdfAsync(string reportType, object reportData, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Export report to Excel
+    /// </summary>
+    Task<Guid> ExportReportToExcelAsync(string reportType, object reportData, CancellationToken cancellationToken = default);
 }

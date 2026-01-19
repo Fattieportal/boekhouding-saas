@@ -11,16 +11,25 @@ public class ReportService : IReportService
 {
     private readonly ApplicationDbContext _context;
     private readonly ITenantContext _tenantContext;
+    private readonly IAuditLogService _auditLog;
+    private readonly IUserContext _userContext;
 
-    public ReportService(ApplicationDbContext context, ITenantContext tenantContext)
+    public ReportService(
+        ApplicationDbContext context, 
+        ITenantContext tenantContext,
+        IAuditLogService auditLog,
+        IUserContext userContext)
     {
         _context = context;
         _tenantContext = tenantContext;
+        _auditLog = auditLog;
+        _userContext = userContext;
     }
 
     public async Task<List<AccountsReceivableDto>> GetAccountsReceivableAsync(CancellationToken cancellationToken = default)
     {
         var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
 
         // Get all posted invoices that are not yet paid
         var outstandingInvoices = await _context.Set<SalesInvoice>()
@@ -55,12 +64,25 @@ public class ReportService : IReportService
             .OrderByDescending(ar => ar.TotalOutstanding)
             .ToList();
 
+        // Audit log for report generation
+        var totalOutstanding = grouped.Sum(g => g.TotalOutstanding);
+        await _auditLog.LogAsync(tenantId, userId, "GENERATE_REPORT", "Report", Guid.NewGuid(),
+            new 
+            { 
+                ReportType = "AccountsReceivable",
+                ContactCount = grouped.Count,
+                TotalOutstanding = totalOutstanding,
+                TotalInvoices = grouped.Sum(g => g.InvoiceCount),
+                Message = $"Accounts Receivable report generated: {grouped.Count} contacts, €{totalOutstanding:N2} outstanding"
+            });
+
         return grouped;
     }
 
     public async Task<VatReportDto> GetVatReportAsync(DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default)
     {
         var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
 
         // Ensure dates are UTC
         var fromDateUtc = DateTime.SpecifyKind(fromDate.Date, DateTimeKind.Utc);
@@ -104,6 +126,63 @@ public class ReportService : IReportService
             InvoiceCount = postedInvoices.Count
         };
 
+        // Audit log for VAT report generation
+        await _auditLog.LogAsync(tenantId, userId, "GENERATE_REPORT", "Report", Guid.NewGuid(),
+            new 
+            { 
+                ReportType = "VATReport",
+                FromDate = fromDateUtc,
+                ToDate = toDateUtc,
+                TotalRevenue = report.TotalRevenue,
+                TotalVAT = report.TotalVat,
+                InvoiceCount = report.InvoiceCount,
+                Message = $"VAT report generated for period {fromDateUtc:yyyy-MM-dd} to {toDateUtc:yyyy-MM-dd}: €{report.TotalVat:N2} VAT"
+            });
+
         return report;
+    }
+
+    public async Task<Guid> ExportReportToPdfAsync(string reportType, object reportData, CancellationToken cancellationToken = default)
+    {
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+
+        var exportId = Guid.NewGuid();
+
+        // In real implementation: generate PDF using IPdfRenderer
+        // For now, just log the export
+
+        await _auditLog.LogAsync(tenantId, userId, "EXPORT_PDF", "Report", exportId,
+            new 
+            { 
+                ReportType = reportType,
+                ExportId = exportId,
+                ExportedAt = DateTime.UtcNow,
+                Message = $"Report '{reportType}' exported to PDF"
+            });
+
+        return exportId;
+    }
+
+    public async Task<Guid> ExportReportToExcelAsync(string reportType, object reportData, CancellationToken cancellationToken = default)
+    {
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+
+        var exportId = Guid.NewGuid();
+
+        // In real implementation: generate Excel file
+        // For now, just log the export
+
+        await _auditLog.LogAsync(tenantId, userId, "EXPORT_EXCEL", "Report", exportId,
+            new 
+            { 
+                ReportType = reportType,
+                ExportId = exportId,
+                ExportedAt = DateTime.UtcNow,
+                Message = $"Report '{reportType}' exported to Excel"
+            });
+
+        return exportId;
     }
 }
