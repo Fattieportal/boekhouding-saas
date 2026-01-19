@@ -422,7 +422,7 @@ public static class DbSeeder
         }
         
         // Also seed demo data
-        await DemoSeeder.SeedDemoDataAsync(serviceProvider);
+        await DemoSeeder.SeedDemoDataAsync(scope.ServiceProvider);
     }
 }
 
