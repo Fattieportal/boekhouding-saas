@@ -25,7 +25,7 @@ public class ScribanTemplateRenderer : ITemplateRenderer
             
             // Create a script object and add all data recursively
             var scriptObject = new ScriptObject();
-            scriptObject.Import(data, renamer: member => member.Name);
+            AddObjectToScriptObject(scriptObject, data);
             
             var context = new TemplateContext();
             context.StrictVariables = false; // Allow undefined variables
