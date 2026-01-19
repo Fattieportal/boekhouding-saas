@@ -115,6 +115,11 @@ export default function AuditLogPage() {
                   <option value="BankTransaction">Bank Transactions</option>
                   <option value="Account">Accounts</option>
                   <option value="Tenant">Tenants</option>
+                  <option value="VATReturn">VAT Returns</option>
+                  <option value="Period">Periods</option>
+                  <option value="YearEnd">Year End</option>
+                  <option value="Report">Reports</option>
+                  <option value="User">Users</option>
                 </select>
               </div>
 
@@ -129,6 +134,26 @@ export default function AuditLogPage() {
                   <option value="REVERSE">Reverse</option>
                   <option value="IMPORT">Import</option>
                   <option value="MATCH">Match</option>
+                  <option value="UNMATCH">Unmatch</option>
+                  <option value="RECONCILE">Reconcile</option>
+                  <option value="CALCULATE">Calculate</option>
+                  <option value="SUBMIT">Submit</option>
+                  <option value="APPROVE">Approve</option>
+                  <option value="CLOSE_PERIOD">Close Period</option>
+                  <option value="REOPEN_PERIOD">Reopen Period</option>
+                  <option value="YEAR_END_CLOSE">Year End Close</option>
+                  <option value="OPENING_BALANCES">Opening Balances</option>
+                  <option value="CREATE_ACCOUNT">Create Account</option>
+                  <option value="UPDATE_ACCOUNT">Update Account</option>
+                  <option value="DELETE_ACCOUNT">Delete Account</option>
+                  <option value="DEACTIVATE_ACCOUNT">Deactivate Account</option>
+                  <option value="LOGIN">Login</option>
+                  <option value="LOGOUT">Logout</option>
+                  <option value="FAILED_LOGIN">Failed Login</option>
+                  <option value="PERMISSION_CHANGE">Permission Change</option>
+                  <option value="GENERATE_REPORT">Generate Report</option>
+                  <option value="EXPORT_PDF">Export PDF</option>
+                  <option value="EXPORT_EXCEL">Export Excel</option>
                 </select>
               </div>
 

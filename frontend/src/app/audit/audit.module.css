@@ -285,6 +285,107 @@
   color: #065f46;
 }
 
+.badgeUNMATCH {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.badgeRECONCILE {
+  background: #ccfbf1;
+  color: #115e59;
+}
+
+.badgeCALCULATE {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.badgeSUBMIT {
+  background: #ddd6fe;
+  color: #5b21b6;
+}
+
+.badgeAPPROVE {
+  background: #bbf7d0;
+  color: #14532d;
+}
+
+.badgeCLOSE_PERIOD {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.badgeREOPEN_PERIOD {
+  background: #fed7aa;
+  color: #9a3412;
+}
+
+.badgeYEAR_END_CLOSE {
+  background: #dc2626;
+  color: white;
+  font-weight: 600;
+}
+
+.badgeOPENING_BALANCES {
+  background: #bfdbfe;
+  color: #1e3a8a;
+}
+
+.badgeCREATE_ACCOUNT {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badgeUPDATE_ACCOUNT {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badgeDELETE_ACCOUNT {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badgeDEACTIVATE_ACCOUNT {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.badgeLOGIN {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badgeLOGOUT {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.badgeFAILED_LOGIN {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badgePERMISSION_CHANGE {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badgeGENERATE_REPORT {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.badgeEXPORT_PDF {
+  background: #fecaca;
+  color: #7f1d1d;
+}
+
+.badgeEXPORT_EXCEL {
+  background: #bbf7d0;
+  color: #14532d;
+}
+
 .entityType {
   color: #374151;
   font-weight: 500;
