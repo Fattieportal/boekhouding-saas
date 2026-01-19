@@ -244,6 +244,37 @@ app.MapGet("/health", () => Results.Ok(new
 .WithName("HealthCheck")
 .WithOpenApi();
 
+// 🔧 Auto-apply database migrations on startup (Railway deployment support)
+Console.WriteLine("🔄 Checking for pending database migrations...");
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    try
+    {
+        var pendingMigrations = dbContext.Database.GetPendingMigrations().ToList();
+        if (pendingMigrations.Any())
+        {
+            Console.WriteLine($"⚡ Applying {pendingMigrations.Count} pending migrations:");
+            foreach (var migration in pendingMigrations)
+            {
+                Console.WriteLine($"   - {migration}");
+            }
+            dbContext.Database.Migrate();
+            Console.WriteLine("✅ Database migrations applied successfully!");
+        }
+        else
+        {
+            Console.WriteLine("✅ Database is up to date (no pending migrations)");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Migration error: {ex.Message}");
+        // Don't crash the app - log and continue
+        Console.WriteLine("⚠️  Continuing startup despite migration error...");
+    }
+}
+
 app.Run();
 
 // Make Program accessible to integration tests
