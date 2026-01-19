@@ -375,6 +375,7 @@ export interface AuditLog {
   actor: {
     email: string;
   };
+  diffJson?: string | null;
   ipAddress?: string;
   userAgent?: string;
 }
