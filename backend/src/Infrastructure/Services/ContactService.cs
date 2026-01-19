@@ -197,6 +197,27 @@ public class ContactService : IContactService
 
         await _context.SaveChangesAsync();
 
+        // Audit log
+        var tenantId = _tenantContext.TenantId;
+        var userId = _currentUserService.GetUserId();
+        
+        if (tenantId.HasValue && userId.HasValue)
+        {
+            await _auditLogService.LogAsync(
+                tenantId.Value,
+                userId.Value,
+                "UPDATE",
+                "Contact",
+                contact.Id,
+                new { 
+                    contact.DisplayName, 
+                    contact.Type, 
+                    contact.Email,
+                    contact.VatNumber,
+                    UpdatedFields = dto
+                });
+        }
+
         return new ContactDto
         {
             Id = contact.Id,
@@ -223,6 +244,25 @@ public class ContactService : IContactService
         if (contact == null)
         {
             return false;
+        }
+
+        // Audit log BEFORE deletion
+        var tenantId = _tenantContext.TenantId;
+        var userId = _currentUserService.GetUserId();
+        
+        if (tenantId.HasValue && userId.HasValue)
+        {
+            await _auditLogService.LogAsync(
+                tenantId.Value,
+                userId.Value,
+                "DELETE",
+                "Contact",
+                contact.Id,
+                new { 
+                    contact.DisplayName, 
+                    contact.Type, 
+                    contact.Email 
+                });
         }
 
         _context.Contacts.Remove(contact);

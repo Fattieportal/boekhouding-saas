@@ -12,17 +12,23 @@ public class BankService : IBankService
     private readonly ApplicationDbContext _context;
     private readonly ITenantContext _tenantContext;
     private readonly IJournalEntryService _journalEntryService;
+    private readonly IAuditLogService _auditLog;
+    private readonly IUserContext _userContext;
     private readonly Dictionary<string, IBankProvider> _providers;
 
     public BankService(
         ApplicationDbContext context,
         ITenantContext tenantContext,
         IJournalEntryService journalEntryService,
+        IAuditLogService auditLog,
+        IUserContext userContext,
         IEnumerable<IBankProvider> providers)
     {
         _context = context;
         _tenantContext = tenantContext;
         _journalEntryService = journalEntryService;
+        _auditLog = auditLog;
+        _userContext = userContext;
         _providers = providers.ToDictionary(p => p.ProviderName, StringComparer.OrdinalIgnoreCase);
     }
 
@@ -176,6 +182,26 @@ public class BankService : IBankService
         connection.LastSyncedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Audit log for import
+        if (imported > 0 || updated > 0)
+        {
+            var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+            var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+            await _auditLog.LogAsync(
+                tenantId,
+                userId,
+                "IMPORT",
+                "BankTransaction",
+                connection.Id,
+                new { 
+                    ConnectionId = connection.Id,
+                    Provider = connection.Provider,
+                    TransactionsImported = imported,
+                    TransactionsUpdated = updated,
+                    Message = $"Imported {imported} new, updated {updated} bank transactions"
+                });
+        }
+
         return new BankSyncResponse
         {
             TransactionsImported = imported,
@@ -328,6 +354,24 @@ public class BankService : IBankService
         }
 
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Audit log for matching
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "MATCH",
+            "BankTransaction",
+            transaction.Id,
+            new { 
+                TransactionId = transaction.Id,
+                InvoiceId = invoiceId,
+                InvoiceNumber = invoice.InvoiceNumber,
+                Amount = transaction.Amount,
+                JournalEntryId = journalEntry.Id,
+                Message = "Bank transaction matched to invoice and posted"
+            });
     }
 
     public async Task DeleteConnectionAsync(Guid connectionId, CancellationToken cancellationToken = default)
