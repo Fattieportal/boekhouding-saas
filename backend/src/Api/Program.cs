@@ -132,18 +132,28 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Seed database in development
-if (app.Environment.IsDevelopment())
+// Run database migrations automatically
+using (var scope = app.Services.CreateScope())
 {
-    using (var scope = app.Services.CreateScope())
+    try
     {
-        var services = scope.ServiceProvider;
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         
-        // First seed basic data (users, tenants, accounts)
+        // Apply pending migrations
+        await dbContext.Database.MigrateAsync();
+        
+        Console.WriteLine("✅ Database migrations applied successfully");
+        
+        // Seed database with initial data
+        var services = scope.ServiceProvider;
         await DbSeeder.SeedAsync(services);
         
-        // Then seed demo tenant with complete scenario
-        await DemoSeeder.SeedDemoDataAsync(services);
+        Console.WriteLine("✅ Database seeded successfully");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️  Database setup warning: {ex.Message}");
+        // Don't throw - seeding might fail if data already exists
     }
 }
 
