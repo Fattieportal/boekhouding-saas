@@ -56,7 +56,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/tenants`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/tenants/my`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
