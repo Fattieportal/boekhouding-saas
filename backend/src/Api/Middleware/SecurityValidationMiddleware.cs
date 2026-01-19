@@ -9,16 +9,19 @@ public class SecurityValidationMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<SecurityValidationMiddleware> _logger;
-    private static readonly HashSet<string> _allowedOrigins = new()
-    {
-        "http://localhost:3000",
-        "https://localhost:3000"
-    };
+    private readonly IConfiguration _configuration;
+    private readonly HashSet<string> _allowedOrigins;
 
-    public SecurityValidationMiddleware(RequestDelegate next, ILogger<SecurityValidationMiddleware> logger)
+    public SecurityValidationMiddleware(RequestDelegate next, ILogger<SecurityValidationMiddleware> logger, IConfiguration configuration)
     {
         _next = next;
         _logger = logger;
+        _configuration = configuration;
+        
+        // Load allowed origins from configuration (same as CORS)
+        var configuredOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>() 
+            ?? new[] { "http://localhost:3000", "https://localhost:3000" };
+        _allowedOrigins = new HashSet<string>(configuredOrigins);
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -32,7 +35,8 @@ public class SecurityValidationMiddleware
             // Als er een Origin header is (CORS request), valideer deze
             if (!string.IsNullOrEmpty(origin))
             {
-                if (!_allowedOrigins.Contains(origin))
+                // Check if wildcard is allowed OR origin is in the allowed list
+                if (!_allowedOrigins.Contains("*") && !_allowedOrigins.Contains(origin))
                 {
                     _logger.LogWarning("Request blocked from unauthorized origin: {Origin}", origin);
                     context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
