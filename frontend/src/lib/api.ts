@@ -152,7 +152,7 @@ class ApiClient {
    */
   async downloadFile(endpoint: string, filename: string, options: ApiClientOptions = {}): Promise<void> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: 'GET',
+      method: 'POST',
       headers: this.getHeaders(options),
     });
 
