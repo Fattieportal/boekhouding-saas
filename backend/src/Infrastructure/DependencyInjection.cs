@@ -96,6 +96,7 @@ public static class DependencyInjection
         // VAT & Compliance
         services.AddScoped<IVATService, VATService>();
         services.AddScoped<IYearEndService, YearEndService>();
+        services.AddScoped<IPeriodClosureService, PeriodClosureService>();
         
         return services;
     }
