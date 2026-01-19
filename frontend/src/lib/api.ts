@@ -381,10 +381,13 @@ export interface AuditLog {
 }
 
 export const auditApi = {
-  getLogs: (skip = 0, take = 50, action?: string) => {
-    let endpoint = `/api/auditlogs?skip=${skip}&take=${take}`;
-    if (action) endpoint += `&action=${action}`;
-    return api.get<AuditLog[]>(endpoint);
+  getLogs: (skip = 0, take = 50, queryParams?: string) => {
+    // If queryParams is provided, use it directly (it should already contain skip and take)
+    if (queryParams) {
+      return api.get<AuditLog[]>(`/api/auditlogs?${queryParams}`);
+    }
+    // Otherwise, build basic query
+    return api.get<AuditLog[]>(`/api/auditlogs?skip=${skip}&take=${take}`);
   },
 };
 
