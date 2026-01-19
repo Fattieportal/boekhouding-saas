@@ -188,6 +188,65 @@ public class BankController : ControllerBase
     }
 
     /// <summary>
+    /// Unmatch een transactie van een factuur
+    /// </summary>
+    [HttpPost("transactions/{transactionId}/unmatch")]
+    public async Task<IActionResult> UnmatchTransaction(
+        Guid transactionId,
+        [FromBody] UnmatchTransactionRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _bankService.UnmatchTransactionAsync(
+                transactionId, 
+                request.Reason, 
+                cancellationToken);
+            
+            return Ok(new { message = "Transaction unmatched successfully" });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Reconcile bank transacties voor een periode
+    /// </summary>
+    [HttpPost("connections/{connectionId}/reconcile")]
+    public async Task<IActionResult> ReconcileTransactions(
+        Guid connectionId,
+        [FromBody] ReconcileTransactionsRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _bankService.ReconcileTransactionsAsync(
+                connectionId,
+                request.PeriodStart,
+                request.PeriodEnd,
+                request.OpeningBalance,
+                request.ClosingBalance,
+                cancellationToken);
+            
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Verwijder een bank connectie
     /// </summary>
     [HttpDelete("connections/{connectionId}")]
@@ -211,3 +270,9 @@ public class BankController : ControllerBase
 public record InitiateConnectionRequest(string Provider);
 public record SyncTransactionsRequest(DateTime? From, DateTime? To);
 public record MatchTransactionRequest(Guid InvoiceId);
+public record UnmatchTransactionRequest(string Reason);
+public record ReconcileTransactionsRequest(
+    DateTime PeriodStart, 
+    DateTime PeriodEnd, 
+    decimal OpeningBalance, 
+    decimal ClosingBalance);

@@ -39,6 +39,22 @@ public interface IBankService
     Task MatchTransactionToInvoiceAsync(Guid transactionId, Guid invoiceId, CancellationToken cancellationToken = default);
     
     /// <summary>
+    /// Unmatch een transactie van een factuur (reverse matching)
+    /// </summary>
+    Task UnmatchTransactionAsync(Guid transactionId, string reason, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Reconcile (afsluiten) van bank transacties voor een periode
+    /// </summary>
+    Task<BankReconciliationResponse> ReconcileTransactionsAsync(
+        Guid connectionId, 
+        DateTime periodStart, 
+        DateTime periodEnd,
+        decimal openingBalance,
+        decimal closingBalance,
+        CancellationToken cancellationToken = default);
+    
+    /// <summary>
     /// Verwijder een bank connectie
     /// </summary>
     Task DeleteConnectionAsync(Guid connectionId, CancellationToken cancellationToken = default);

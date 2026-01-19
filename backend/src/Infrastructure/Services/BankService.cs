@@ -374,6 +374,163 @@ public class BankService : IBankService
             });
     }
 
+    public async Task UnmatchTransactionAsync(
+        Guid transactionId, 
+        string reason, 
+        CancellationToken cancellationToken = default)
+    {
+        var transaction = await _context.Set<BankTransaction>()
+            .Include(t => t.MatchedInvoice)
+            .FirstOrDefaultAsync(t => t.Id == transactionId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Transaction {transactionId} not found");
+
+        if (transaction.MatchedStatus != BankTransactionMatchStatus.MatchedToInvoice)
+        {
+            throw new InvalidOperationException("Transaction is not matched to an invoice");
+        }
+
+        if (!transaction.MatchedInvoiceId.HasValue || !transaction.JournalEntryId.HasValue)
+        {
+            throw new InvalidOperationException("Transaction matching data is incomplete");
+        }
+
+        var invoice = transaction.MatchedInvoice 
+            ?? await _context.Set<SalesInvoice>()
+                .FirstOrDefaultAsync(i => i.Id == transaction.MatchedInvoiceId.Value, cancellationToken)
+            ?? throw new KeyNotFoundException($"Matched invoice {transaction.MatchedInvoiceId.Value} not found");
+
+        var journalEntry = await _context.Set<JournalEntry>()
+            .FirstOrDefaultAsync(j => j.Id == transaction.JournalEntryId.Value, cancellationToken)
+            ?? throw new KeyNotFoundException($"Journal entry {transaction.JournalEntryId.Value} not found");
+
+        // Validatie: kan alleen unmatchen als journal entry nog niet reversed is
+        if (journalEntry.Status == JournalEntryStatus.Reversed)
+        {
+            throw new InvalidOperationException("Cannot unmatch - journal entry is already reversed");
+        }
+
+        // Reverse de journal entry (description wordt automatisch gegenereerd)
+        await _journalEntryService.ReverseEntryAsync(journalEntry.Id, cancellationToken);
+
+        // Restore invoice OpenAmount
+        invoice.OpenAmount += transaction.Amount;
+        if (invoice.Status == InvoiceStatus.Paid)
+        {
+            invoice.Status = InvoiceStatus.Posted; // Terug naar Posted (was betaald)
+        }
+
+        // Update transaction status
+        var previousInvoiceId = transaction.MatchedInvoiceId;
+        var previousInvoiceNumber = invoice.InvoiceNumber;
+        
+        transaction.MatchedInvoiceId = null;
+        transaction.MatchedStatus = BankTransactionMatchStatus.Unmatched;
+        transaction.JournalEntryId = null;
+        transaction.MatchedAt = null;
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Audit log for unmatching
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "UNMATCH",
+            "BankTransaction",
+            transaction.Id,
+            new { 
+                TransactionId = transaction.Id,
+                InvoiceId = previousInvoiceId,
+                InvoiceNumber = previousInvoiceNumber,
+                Amount = transaction.Amount,
+                Reason = reason,
+                Message = "Bank transaction unmatched from invoice"
+            });
+    }
+
+    public async Task<BankReconciliationResponse> ReconcileTransactionsAsync(
+        Guid connectionId,
+        DateTime periodStart,
+        DateTime periodEnd,
+        decimal openingBalance,
+        decimal closingBalance,
+        CancellationToken cancellationToken = default)
+    {
+        var connection = await _context.Set<BankConnection>()
+            .FirstOrDefaultAsync(c => c.Id == connectionId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Connection {connectionId} not found");
+
+        // Haal alle transacties op voor de periode
+        var transactions = await _context.Set<BankTransaction>()
+            .Where(t => t.BankConnectionId == connectionId)
+            .Where(t => t.BookingDate >= periodStart && t.BookingDate <= periodEnd)
+            .OrderBy(t => t.BookingDate)
+            .ToListAsync(cancellationToken);
+
+        // Bereken totalen
+        var totalTransactions = transactions.Count;
+        var matchedTransactions = transactions.Count(t => t.MatchedStatus == BankTransactionMatchStatus.MatchedToInvoice);
+        var unmatchedTransactions = transactions.Count(t => t.MatchedStatus == BankTransactionMatchStatus.Unmatched);
+
+        // Bereken calculated balance
+        var totalDebits = transactions.Where(t => t.Amount > 0).Sum(t => t.Amount);
+        var totalCredits = transactions.Where(t => t.Amount < 0).Sum(t => Math.Abs(t.Amount));
+        var calculatedBalance = openingBalance + totalDebits - totalCredits;
+
+        // Check of het balanceert
+        var difference = closingBalance - calculatedBalance;
+        var isBalanced = Math.Abs(difference) < 0.01m; // Tolerance voor rounding
+
+        var reconciliationId = Guid.NewGuid();
+        var reconciledAt = DateTime.UtcNow;
+
+        // In een echte implementatie zou je hier een BankReconciliation entity opslaan
+        // Voor nu loggen we alleen de reconciliatie
+
+        // Audit log for reconciliation
+        var tenantId = _tenantContext.TenantId ?? throw new InvalidOperationException("Tenant context is not set");
+        var userId = _userContext.UserId ?? throw new InvalidOperationException("User context is not set");
+        await _auditLog.LogAsync(
+            tenantId,
+            userId,
+            "RECONCILE",
+            "BankTransaction",
+            connectionId,
+            new { 
+                ReconciliationId = reconciliationId,
+                ConnectionId = connectionId,
+                Period = $"{periodStart:yyyy-MM-dd} to {periodEnd:yyyy-MM-dd}",
+                TotalTransactions = totalTransactions,
+                MatchedTransactions = matchedTransactions,
+                UnmatchedTransactions = unmatchedTransactions,
+                OpeningBalance = openingBalance,
+                ClosingBalance = closingBalance,
+                CalculatedBalance = calculatedBalance,
+                Difference = difference,
+                IsBalanced = isBalanced,
+                Message = isBalanced 
+                    ? $"Bank reconciliation completed successfully for period {periodStart:yyyy-MM-dd} to {periodEnd:yyyy-MM-dd}"
+                    : $"Bank reconciliation completed with difference of {difference:C} for period {periodStart:yyyy-MM-dd} to {periodEnd:yyyy-MM-dd}"
+            });
+
+        return new BankReconciliationResponse
+        {
+            ReconciliationId = reconciliationId,
+            PeriodStart = periodStart,
+            PeriodEnd = periodEnd,
+            OpeningBalance = openingBalance,
+            ClosingBalance = closingBalance,
+            TotalTransactions = totalTransactions,
+            MatchedTransactions = matchedTransactions,
+            UnmatchedTransactions = unmatchedTransactions,
+            CalculatedBalance = calculatedBalance,
+            Difference = difference,
+            IsBalanced = isBalanced,
+            ReconciledAt = reconciledAt
+        };
+    }
+
     public async Task DeleteConnectionAsync(Guid connectionId, CancellationToken cancellationToken = default)
     {
         var connection = await _context.Set<BankConnection>()
