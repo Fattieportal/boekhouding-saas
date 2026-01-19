@@ -94,6 +94,9 @@ public static class DbSeeder
             logger.LogError(ex, "An error occurred while seeding the database.");
             throw;
         }
+        
+        // Seed demo data after basic seeding
+        await DemoSeeder.SeedDemoDataAsync(scope.ServiceProvider);
     }
 
     private static async Task SeedUserTenantsAsync(ApplicationDbContext context, ILogger logger)
@@ -420,9 +423,6 @@ public static class DbSeeder
 
             logger.LogInformation($"Seeded {contacts.Count} contacts for tenant {tenant.Name}");
         }
-        
-        // Also seed demo data
-        await DemoSeeder.SeedDemoDataAsync(scope.ServiceProvider);
     }
 }
 
