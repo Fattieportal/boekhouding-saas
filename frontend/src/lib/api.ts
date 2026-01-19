@@ -154,10 +154,12 @@ class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
       headers: this.getHeaders(options),
+      body: JSON.stringify({}), // Empty body for POST request
     });
 
     if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Download failed: ${response.status} - ${errorText}`);
     }
 
     const blob = await response.blob();
