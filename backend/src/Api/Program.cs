@@ -160,16 +160,35 @@ builder.Services.AddInfrastructure(builder.Configuration);
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() 
     ?? new[] { "http://localhost:3000", "https://localhost:3000" };
 
+Console.WriteLine($"🌐 CORS: Configured {allowedOrigins.Length} allowed origins:");
+foreach (var origin in allowedOrigins)
+{
+    Console.WriteLine($"   - {origin}");
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(allowedOrigins)
-              .AllowAnyHeader()
-              .WithExposedHeaders("X-Tenant-Id")
-              .AllowAnyMethod()
-              .AllowCredentials()
-              .SetIsOriginAllowedToAllowWildcardSubdomains(); // Voor production subdomains
+        // Check if wildcard is requested
+        if (allowedOrigins.Contains("*"))
+        {
+            Console.WriteLine("⚠️  CORS: Wildcard (*) detected - allowing all origins (DEV ONLY!)");
+            policy.SetIsOriginAllowed(_ => true) // Allow any origin
+                  .AllowAnyHeader()
+                  .WithExposedHeaders("X-Tenant-Id")
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyHeader()
+                  .WithExposedHeaders("X-Tenant-Id")
+                  .AllowAnyMethod()
+                  .AllowCredentials()
+                  .SetIsOriginAllowedToAllowWildcardSubdomains();
+        }
     });
 });
 
