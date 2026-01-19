@@ -12,6 +12,14 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Override connection string from environment variable (Railway support)
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (!string.IsNullOrEmpty(databaseUrl))
+{
+    Console.WriteLine("🔧 Overriding connection string from DATABASE_URL environment variable");
+    builder.Configuration["ConnectionStrings:DefaultConnection"] = databaseUrl;
+}
+
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
